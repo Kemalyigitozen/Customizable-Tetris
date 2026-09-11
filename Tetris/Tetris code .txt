@@ -1,0 +1,293 @@
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+
+// ================= TFT PINLER =================
+#define TFT_DC  16
+#define TFT_CS  17
+#define TFT_RST 20
+
+// ================= BUTONLAR =================
+#define BTN_SOL     11
+#define BTN_SAG     5
+#define BTN_DONDUR  14
+#define BTN_ASAGI   27
+#define BTN_RESET   3
+
+Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_RST);
+
+// ================= SABİTLER =================
+#define BLOK   16
+#define GEN    10
+#define YUK    17
+
+#define OFS_X   8
+#define OFS_Y   36
+#define PANEL_X 180
+
+// ================= RENKLER =================
+uint16_t renkler[] = {
+  ILI9341_BLACK,
+  ILI9341_CYAN,
+  ILI9341_BLUE,
+  ILI9341_ORANGE,
+  ILI9341_YELLOW,
+  ILI9341_GREEN,
+  ILI9341_MAGENTA,
+  ILI9341_RED
+};
+
+// ================= TETRIS SEKİLLERİ =================
+const byte sekiller[7][4][4] = {
+  {{0,0,0,0},{1,1,1,1},{0,0,0,0},{0,0,0,0}}, // I
+  {{1,0,0,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}}, // J
+  {{0,0,1,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}}, // L
+  {{0,1,1,0},{0,1,1,0},{0,0,0,0},{0,0,0,0}}, // O
+  {{0,1,1,0},{1,1,0,0},{0,0,0,0},{0,0,0,0}}, // S
+  {{0,1,0,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}}, // T
+  {{1,1,0,0},{0,1,1,0},{0,0,0,0},{0,0,0,0}}  // Z
+};
+
+// ================= OYUN DEĞİŞKENLERİ =================
+int saha[GEN][YUK];
+int aktif[4][4];
+int tip, sonraki;
+int x, y;
+int skor = 0;
+int carp = 1;
+bool oyunBitti = false;
+
+unsigned long sonDusme = 0;
+unsigned long sonTus = 0;
+
+// ================= BAŞLIK (ORTALI & RENKLİ) =================
+void baslikCiz() {
+  const char* yazi = "YIGITETRIS";
+  int harfSayisi = 10;
+  int harfGenislik = 12;        // textSize=2 için
+  int toplamGen = harfSayisi * harfGenislik;
+  int basX = (240 - toplamGen) / 2;
+
+  tft.setTextSize(2);
+
+  for (int i = 0; i < harfSayisi; i++) {
+    tft.setTextColor(renkler[(i % 7) + 1]);
+    tft.setCursor(basX + i * harfGenislik, 8);
+    tft.print(yazi[i]);
+  }
+
+  tft.drawLine(0, 30, 240, 30, ILI9341_WHITE);
+}
+
+// ================= ARAYÜZ =================
+void oyunCerceve() {
+  tft.drawRect(OFS_X-2, OFS_Y-2, GEN*BLOK+4, YUK*BLOK+4, ILI9341_WHITE);
+}
+
+void sagPanelCiz() {
+  tft.setTextSize(1);
+  tft.setTextColor(ILI9341_WHITE);
+
+  tft.setCursor(PANEL_X, 40);
+  tft.print("SIRADAKI");
+  tft.drawRect(PANEL_X, 55, 48, 48, ILI9341_WHITE);
+
+  tft.setCursor(PANEL_X, 120);
+  tft.print("PUAN");
+
+  tft.setCursor(PANEL_X, 170);
+  tft.print("HIZ");
+}
+
+void panelGuncelle() {
+  tft.fillRect(PANEL_X, 135, 60, 20, ILI9341_BLACK);
+  tft.setCursor(PANEL_X, 135);
+  tft.setTextSize(2);
+  tft.setTextColor(ILI9341_GREEN);
+  tft.print(skor);
+
+  tft.fillRect(PANEL_X, 185, 40, 20, ILI9341_BLACK);
+  tft.setCursor(PANEL_X, 185);
+  tft.setTextSize(2);
+  tft.setTextColor(ILI9341_YELLOW);
+  tft.print("x");
+  tft.print(carp);
+}
+
+void siradakiCiz() {
+  tft.fillRect(PANEL_X+2, 57, 44, 44, ILI9341_BLACK);
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      if(sekiller[sonraki][i][j])
+        tft.fillRect(PANEL_X+6+j*10, 61+i*10, 9, 9, renkler[sonraki+1]);
+}
+
+// ================= OYUN MANTIĞI =================
+bool hareket(int nx,int ny,int s[4][4]) {
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      if(s[i][j]) {
+        int gx = nx+j;
+        int gy = ny+i;
+        if(gx<0 || gx>=GEN || gy>=YUK) return false;
+        if(gy>=0 && saha[gx][gy]) return false;
+      }
+  return true;
+}
+
+void ciz() {
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      if(aktif[i][j])
+        tft.fillRect(OFS_X+(x+j)*BLOK, OFS_Y+(y+i)*BLOK, BLOK-1, BLOK-1, renkler[tip+1]);
+}
+
+void sil() {
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      if(aktif[i][j])
+        tft.fillRect(OFS_X+(x+j)*BLOK, OFS_Y+(y+i)*BLOK, BLOK-1, BLOK-1, ILI9341_BLACK);
+}
+
+void dondur() {
+  int tmp[4][4];
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      tmp[i][j] = aktif[3-j][i];
+
+  if(hareket(x,y,tmp)) {
+    sil();
+    memcpy(aktif,tmp,sizeof(tmp));
+    ciz();
+  }
+}
+
+void sabitle() {
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      if(aktif[i][j])
+        saha[x+j][y+i] = tip+1;
+}
+
+void satirSil() {
+  int silinen = 0;
+  for(int r=YUK-1;r>=0;r--) {
+    bool dolu = true;
+    for(int c=0;c<GEN;c++)
+      if(!saha[c][r]) dolu = false;
+
+    if(dolu) {
+      silinen++;
+      for(int yy=r;yy>0;yy--)
+        for(int c=0;c<GEN;c++)
+          saha[c][yy] = saha[c][yy-1];
+      r++;
+    }
+  }
+
+  if(silinen) {
+    skor += silinen * 100 * carp;
+    if(skor >= carp * 1000) carp++;
+
+    tft.fillRect(OFS_X, OFS_Y, GEN*BLOK, YUK*BLOK, ILI9341_BLACK);
+    for(int i=0;i<GEN;i++)
+      for(int j=0;j<YUK;j++)
+        if(saha[i][j])
+          tft.fillRect(OFS_X+i*BLOK, OFS_Y+j*BLOK, BLOK-1, BLOK-1, renkler[saha[i][j]]);
+    panelGuncelle();
+  }
+}
+
+void oyunBittiEkran() {
+  tft.fillRect(20, 120, 200, 80, ILI9341_BLACK);
+  tft.drawRect(20, 120, 200, 80, ILI9341_RED);
+
+  tft.setTextSize(2);
+  tft.setTextColor(ILI9341_RED);
+  tft.setCursor(55, 135);
+  tft.print("KAYBETTINIZ");
+
+  tft.setTextSize(1);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setCursor(75, 165);
+  tft.print("PUAN: ");
+  tft.print(skor);
+}
+
+void yeniBlok() {
+  tip = sonraki;
+  sonraki = random(0,7);
+
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      aktif[i][j] = sekiller[tip][i][j];
+
+  x = 3;
+  y = 0;
+  siradakiCiz();
+
+  if(!hareket(x,y,aktif)) {
+    oyunBitti = true;
+    oyunBittiEkran();
+  } else {
+    ciz();
+  }
+}
+
+void yeniOyun() {
+  memset(saha,0,sizeof(saha));
+  skor = 0;
+  carp = 1;
+  oyunBitti = false;
+
+  tft.fillScreen(ILI9341_BLACK);
+  baslikCiz();
+  oyunCerceve();
+  sagPanelCiz();
+  panelGuncelle();
+
+  sonraki = random(0,7);
+  yeniBlok();
+}
+
+// ================= SETUP =================
+void setup() {
+  pinMode(BTN_SOL, INPUT_PULLUP);
+  pinMode(BTN_SAG, INPUT_PULLUP);
+  pinMode(BTN_DONDUR, INPUT_PULLUP);
+  pinMode(BTN_ASAGI, INPUT_PULLUP);
+  pinMode(BTN_RESET, INPUT_PULLUP);
+
+  tft.begin();
+  tft.setRotation(0);
+  randomSeed(millis());
+
+  yeniOyun();
+}
+
+// ================= LOOP =================
+void loop() {
+  if(digitalRead(BTN_RESET) == LOW) {
+    delay(300);
+    yeniOyun();
+    return;
+  }
+
+  if(oyunBitti) return;
+
+  unsigned long simdi = millis();
+
+  if(simdi - sonTus > 80) {
+    if(digitalRead(BTN_SOL)==LOW && hareket(x-1,y,aktif)) { sil(); x--; ciz(); }
+    if(digitalRead(BTN_SAG)==LOW && hareket(x+1,y,aktif)) { sil(); x++; ciz(); }
+    if(digitalRead(BTN_DONDUR)==LOW) dondur();
+    sonTus = simdi;
+  }
+
+  int hiz = digitalRead(BTN_ASAGI)==LOW ? 50 : max(120, 500 - carp*40);
+
+  if(simdi - sonDusme > hiz) {
+    if(hareket(x,y+1,aktif)) { sil(); y++; ciz(); }
+    else { sabitle(); satirSil(); yeniBlok(); }
+    sonDusme = simdi;
+  }
+}
