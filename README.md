@@ -26,3 +26,5 @@ Please wire the circuit on your breadboard exactly as shown in the **pinout diag
 4. Once the upload is complete, the screen will boot up and the game will be ready to play!
 
 <img width="1884" height="2272" alt="Gemini_Generated_Image_nr6orvnr6orvnr6o" src="https://github.com/user-attachments/assets/ca7fb15c-190c-4a61-a403-da76195b70e4" />
+
+Contact me if there is a problem.
