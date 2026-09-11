@@ -1,3 +1,4 @@
+ENGLISH
 ## 🛠️ Installation and Setup Guide
 First open the Tetris file 
 
@@ -28,3 +29,32 @@ Please wire the circuit on your breadboard exactly as shown in the **pinout diag
 <img width="1884" height="2272" alt="Gemini_Generated_Image_nr6orvnr6orvnr6o" src="https://github.com/user-attachments/assets/ca7fb15c-190c-4a61-a403-da76195b70e4" />
 
 Contact me if there is a problem.
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+TÜRKÇE
+## 🛠️ Kurulum ve Kullanım Adımları
+
+Bu projeyi kendi donanımınızda çalıştırmak için aşağıdaki adımları sırasıyla izleyebilirsiniz.
+
+### 1. Gerekli Kütüphanelerin Kurulumu
+Ekrandaki grafiklerin ve oyun dinamiklerinin sorunsuz çalışması için Arduino IDE üzerinde **Adafruit** kütüphanelerine ihtiyacımız var. 
+
+1. Arduino IDE'yi açın.
+2. Üst menüden **Taslak (Sketch)** > **library ekle (Include Library)** > **Kütüphaneleri Yönet (Manage Libraries)** seçeneğine tıklayın.
+3. Arama çubuğunu kullanarak aşağıdaki kütüphaneleri bulup yükleyin:
+   * **Adafruit GFX Library:** Temel grafik ve şekil çizimleri için.
+   * **Adafruit ILI9341:** Kullandığımız TFT ekranın donanım sürücüsü.
+
+### 2. Devre Kurulumu ve Kablolama
+Raspberry Pi Pico, ILI9341 ekran ve yön/döndürme butonlarının birbiriyle haberleşebilmesi için bağlantıların doğru yapılması çok önemlidir. 
+
+Repoda (proje dosyaları arasında) yer alan **pin şeması görseline** bakarak devre tahtası (breadboard) üzerindeki bağlantıları birebir kurun. Temel mantık şu şekildedir:
+* **ILI9341 Ekran:** Şemada belirtilen SPI pinleri (SCK, MOSI, CS vb.) Pico'nun ilgili SPI bacaklarına, VCC ise 3.3V çıkışına bağlanmalıdır.
+* **Kontrol Butonları:** Hareket (Sağ, Sol, Aşağı) ve Döndürme butonlarının birer bacağı şemada belirtilen Pico GPIO pinlerine, diğer bacakları ise doğrudan ortak GND (Toprak) hattına bağlanır. (Kod içerisinde dahili Pull-Up dirençleri aktifleştirilmiştir.)
+
+### 3. Kodu Yükleme ve Başlatma
+1. Devre bağlantılarını şemaya uygun şekilde tamamladıktan sonra Raspberry Pi Pico'yu USB kablosu ile bilgisayarınıza bağlayın.
+2. Arduino IDE üzerinden doğru kartı (Raspberry Pi Pico) ve bağlı olduğu Port'u seçtiğinizden emin olun.
+3. Projedeki ana oyun kodunu açıp **Yükle (Upload)** butonuna basın.
+4. Yükleme tamamlandığında ekran açılacak ve oyun oynamaya hazır hale gelecektir!
+
+Bir sorun olduğunda bana ulaşın.
