@@ -1,4 +1,5 @@
 ## 🛠️ Installation and Setup Guide
+First open the Tetris file 
 
 Follow the steps below to build and run this project on your own hardware.
 
